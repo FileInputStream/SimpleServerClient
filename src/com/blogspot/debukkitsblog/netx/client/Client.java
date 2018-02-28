@@ -1,5 +1,7 @@
 package com.blogspot.debukkitsblog.netx.client;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -50,8 +52,6 @@ public class Client {
 			public void run() {
 				
 				while (true) {
-
-					System.out.println("Starting CLH routine...");
 					
 					try {
 
@@ -65,8 +65,6 @@ public class Client {
 						System.err.println("[Client] Connection lost.");
 					} catch (Exception e) {
 						e.printStackTrace();
-					} finally {
-						System.out.println("CLH Routine over.");
 					}
 					
 					System.err.println("[Client] Reconnecting in 5 seconds...");
@@ -87,23 +85,20 @@ public class Client {
 	
 	private void login() throws IOException {
 		System.out.println("Logging in...");
-		oos = new ObjectOutputStream(socket.getOutputStream());
-		ois = new ObjectInputStream(socket.getInputStream());
+		oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 		oos.writeObject(new Datapackage("__INTERNAL_LOGIN__", id, group));
+		oos.flush();
 		System.out.println("Logged in.");
+		ois = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
 	}
 	
 	private void handleConnection() throws IOException, ClassNotFoundException {
 		
-		System.out.println("Handling connection...");
 		while(true) {
-			System.out.println("Waiting for incoming object...");
 			Object rawMessage = ois.readObject();
-			System.out.println("Got a message!");
 			if(rawMessage instanceof Datapackage) {
-				System.out.println("It's a datapackage!");
 				Datapackage msg = (Datapackage) rawMessage;
-				System.out.println("Executing method for id '" + msg.id() + "'");
+//				System.out.println("Executing executable for id '" + msg.id() + "'");
 				executables.get(msg.id()).execute(msg);
 			}			
 		}
@@ -112,9 +107,9 @@ public class Client {
 	
 	public void sendMessage(String id, Object... o) {
 		try {
-			System.out.println("Sending message...");
 			Datapackage pack = new Datapackage(id, o);
 			oos.writeObject(pack);
+			oos.flush();
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

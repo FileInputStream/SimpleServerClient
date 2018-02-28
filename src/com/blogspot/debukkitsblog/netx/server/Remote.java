@@ -52,6 +52,7 @@ public class Remote {
 		try {
 			Datapackage pack = new Datapackage(id, o);
 			oos.writeObject(pack);
+			oos.flush();
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -59,9 +60,11 @@ public class Remote {
 	
 	@Override
 	public boolean equals(Object obj) {
-		if(obj instanceof Remote) {
+		if(obj != null && obj instanceof Remote) {
 			Remote other = (Remote) obj;
-			return other.getId().equals(this.getId());
+			if(other.getId() != null && this.getId() != null) {
+				return other.getId().equals(this.getId());
+			}
 		}
 		return false;
 	}
