@@ -1,11 +1,7 @@
 package com.blogspot.debukkitsblog.net;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -13,13 +9,13 @@ import java.net.SocketException;
 import java.nio.channels.AlreadyConnectedException;
 import java.util.HashMap;
 import java.util.UUID;
-
-import javax.net.ssl.SSLSocketFactory;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * A very simple Client class for Java network applications<br>
  * originally created on March 9, 2016 in Horstmar, Germany
- * 
+ *
  * @author Leonard Bienbeck
  * @version 2.4.1
  */
@@ -33,7 +29,9 @@ public class Client {
 	protected int timeout;
 
 	protected Thread listeningThread;
-	protected HashMap<String, Executable> idMethods = new HashMap<String, Executable>();
+	protected final HashMap<String, Executable> idMethods = new HashMap<String, Executable>();
+
+	protected final ExecutorService service = Executors.newCachedThreadPool();
 
 	protected int errorCount;
 
@@ -53,7 +51,7 @@ public class Client {
 
 	/**
 	 * Constructs a simple client with just a hostname and port to connect to
-	 * 
+	 *
 	 * @param hostname
 	 *            The hostname to connect to
 	 * @param port
@@ -71,7 +69,7 @@ public class Client {
 	 * Constructs a simple client with a hostname and port to connect to and an id
 	 * the server uses to identify this client in the future (e.g. for sending
 	 * messages only this client should receive)
-	 * 
+	 *
 	 * @param hostname
 	 *            The hostname to connect to
 	 * @param port
@@ -89,7 +87,7 @@ public class Client {
 	 * only this client should receive) and a group name the server uses to identify
 	 * this and some other clients in the future (e.g. for sending messages to the
 	 * members of this group, but no other clients)
-	 * 
+	 *
 	 * @param hostname
 	 *            The hostname to connect to
 	 * @param port
@@ -103,10 +101,10 @@ public class Client {
 	public Client(String hostname, int port, String id, String group) {
 		this(hostname, port, 10000, false, id, group);
 	}
-	
+
 	/**
 	 * Constructs a simple client with all possible configurations
-	 * 
+	 *
 	 * @param hostname
 	 *            The hostname to connect to
 	 * @param port
@@ -128,7 +126,7 @@ public class Client {
 		this.errorCount = 0;
 		this.address = new InetSocketAddress(hostname, port);
 		this.timeout = timeout;
-		
+
 		this.secureMode = useSSL;
 		if (secureMode) {
 			System.setProperty("javax.net.ssl.trustStore", "ssc.store");
@@ -139,7 +137,7 @@ public class Client {
 	/**
 	 * Constructs a simple client with all possible configurations. <b>Warning: The
 	 * autoKill option is useless.</b> Rather use any other constructor instead.
-	 * 
+	 *
 	 * @param hostname
 	 *            The hostname to connect to
 	 * @param port
@@ -176,7 +174,7 @@ public class Client {
 	/**
 	 * Checks whether the client is connected to the server and waiting for incoming
 	 * messages.
-	 * 
+	 *
 	 * @return true, if the client is connected to the server and waiting for
 	 *         incoming messages
 	 */
@@ -189,7 +187,7 @@ public class Client {
 	 * messages is connected. This does not check whether the client actually waits
 	 * for incoming messages with the help of the <i>listening thread</i>, but only
 	 * the pure connection to the server.
-	 * 
+	 *
 	 * @return true, if connected
 	 */
 	public boolean isConnected() {
@@ -198,7 +196,7 @@ public class Client {
 
 	/**
 	 * Checks the connectivity to the server
-	 * 
+	 *
 	 * @return true, if the server can be reached at all using the given address
 	 *         data
 	 */
@@ -219,7 +217,7 @@ public class Client {
 	 * printed.<br>
 	 * <b>Be careful:</b> This will not prevent processing of messages passed to the
 	 * onLog and onLogError methods, if they were overwritten.
-	 * 
+	 *
 	 * @param muted
 	 *            true if there should be no console output
 	 */
@@ -237,7 +235,7 @@ public class Client {
 		login();
 		startListening();
 	}
-	
+
 	/**
 	 * Stops the client. The connection to the server is interrupted as soon as
 	 * possible and then no further Datapackages are received. <b>Warning</b>: The
@@ -275,7 +273,7 @@ public class Client {
 		if(stopped) {
 			return;
 		}
-		
+
 		// 1. connect
 		try {
 			onLog("[Client] Connecting" + (secureMode ? " using SSL..." : "..."));
@@ -284,14 +282,14 @@ public class Client {
 			}
 
 			if (secureMode) {
-				loginSocket = ((SSLSocketFactory) SSLSocketFactory.getDefault()).createSocket(address.getAddress(), address.getPort());
+				loginSocket = SSLSocketFactory.getDefault().createSocket(address.getAddress(), address.getPort());
 			} else {
 				loginSocket = new Socket();
 				loginSocket.connect(this.address, this.timeout);
 			}
 
 			onLog("[Client] Connected to " + loginSocket.getRemoteSocketAddress());
-			
+
 			// 2. login
 			try {
 				onLog("[Client] Logging in...");
@@ -305,7 +303,7 @@ public class Client {
 			} catch (IOException ex) {
 				onLogError("[Client] Login failed.");
 			}
-			
+
 		} catch(ConnectException e) {
 			onLogError("[Client] Connection failed: " + e.getMessage());
 			onConnectionProblem();
@@ -358,10 +356,10 @@ public class Client {
 						if (stopped) {
 							return;
 						}
-						
+
 						if (raw instanceof Datapackage) {
 							final Datapackage msg = (Datapackage) raw;
-							
+
 							// inspect all registered methods
 							for (final String current : idMethods.keySet()) {
 								// if the identifier of a method equals the identifier of the Datapackage...
@@ -406,7 +404,7 @@ public class Client {
 	/**
 	 * Sends a message to the server using a brand new socket and returns the
 	 * server's response
-	 * 
+	 *
 	 * @param message
 	 *            The message to send to the server
 	 * @param timeout
@@ -415,10 +413,12 @@ public class Client {
 	 *         "REPLY" by default, the rest is custom data.
 	 */
 	public Datapackage sendMessage(Datapackage message, int timeout) {
+
+
 		try {
 			Socket tempSocket;
 			if (secureMode) {
-				tempSocket = ((SSLSocketFactory) SSLSocketFactory.getDefault()).createSocket(address.getAddress(), address.getPort());
+				tempSocket = SSLSocketFactory.getDefault().createSocket(address.getAddress(), address.getPort());
 			} else {
 				tempSocket = new Socket();
 				tempSocket.connect(address, timeout);
@@ -439,7 +439,7 @@ public class Client {
 			if (raw instanceof Datapackage) {
 				return (Datapackage) raw;
 			}
-		} catch(EOFException ex) {
+		} catch (EOFException ex) {
 			onLogError("[Client] Error right after sending message: EOFException (did the server forget to send a reply?)");
 		} catch (IOException | ClassNotFoundException ex) {
 			onLogError("[Client] Error while sending message");
@@ -447,12 +447,52 @@ public class Client {
 		}
 
 		return null;
+
+	}
+
+	public void sendMessage(Datapackage message, int timeout, Callback<Datapackage> callback) {
+
+		service.execute(() -> {
+			try {
+				Socket tempSocket;
+				if (secureMode) {
+					tempSocket = SSLSocketFactory.getDefault().createSocket(address.getAddress(), address.getPort());
+				} else {
+					tempSocket = new Socket();
+					tempSocket.connect(address, timeout);
+				}
+
+				ObjectOutputStream tempOOS = new ObjectOutputStream(new BufferedOutputStream(tempSocket.getOutputStream()));
+				message.sign(id, group);
+				tempOOS.writeObject(message);
+				tempOOS.flush();
+
+				ObjectInputStream tempOIS = new ObjectInputStream(new BufferedInputStream(tempSocket.getInputStream()));
+				Object raw = tempOIS.readObject();
+
+				tempOOS.close();
+				tempOIS.close();
+				tempSocket.close();
+
+				if (raw instanceof Datapackage) {
+					callback.done((Datapackage) raw);
+				}
+			} catch (EOFException ex) {
+				onLogError("[Client] Error right after sending message: EOFException (did the server forget to send a reply?)");
+			} catch (IOException | ClassNotFoundException ex) {
+				onLogError("[Client] Error while sending message");
+				ex.printStackTrace();
+			}
+
+			callback.done(null);
+		});
+
 	}
 
 	/**
 	 * Sends a message to the server using a brand new socket and returns the
 	 * server's response
-	 * 
+	 *
 	 * @param ID
 	 *            The ID of the message, allowing the server to decide what to do
 	 *            with its content
@@ -468,7 +508,7 @@ public class Client {
 	/**
 	 * Sends a message to the server using a brand new socket and returns the
 	 * server's response
-	 * 
+	 *
 	 * @param message
 	 *            The message to send to the server
 	 * @return The server's response. The identifier of this Datapackage should be
@@ -481,7 +521,7 @@ public class Client {
 	/**
 	 * Registers a method that will be executed if a message containing
 	 * <i>identifier</i> is received
-	 * 
+	 *
 	 * @param identifier
 	 *            The ID of the message to proccess
 	 * @param executable
@@ -524,7 +564,7 @@ public class Client {
 	 * output stream (if output is not muted).<br>
 	 * Error messages are passed to the <code>onLogError</code> event listener.<br>
 	 * <b>Override this method to catch and process the message in a custom way.</b>
-	 * 
+	 *
 	 * @param message
 	 *            The content of the output to be made
 	 */
@@ -540,7 +580,7 @@ public class Client {
 	 * error output stream (if output is not muted).<br>
 	 * Non-error messages are passed to the <code>onLog</code> event listener.<br>
 	 * <b>Override this method to catch and process the message in a custom way.</b>
-	 * 
+	 *
 	 * @param message
 	 *            The content of the error output to be made
 	 */

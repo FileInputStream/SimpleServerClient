@@ -1,10 +1,7 @@
 package com.blogspot.debukkitsblog.net;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import javax.net.ssl.SSLServerSocketFactory;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,12 +10,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 
-import javax.net.ssl.SSLServerSocketFactory;
-
 /**
  * A very simple-to-use Server class for Java network applications<br>
  * originally created on March 9, 2016 in Horstmar, Germany
- * 
+ *
  * @author Leonard Bienbeck
  * @version 2.4.1
  */
@@ -46,7 +41,7 @@ public abstract class Server {
 	 * connects to this server is registered and can receive broadcast and direct
 	 * messages, the connection will be kept alive using a ping and ssl will not be
 	 * used.
-	 * 
+	 *
 	 * @param port
 	 *            The port to listen on
 	 */
@@ -56,7 +51,7 @@ public abstract class Server {
 
 	/**
 	 * Constructs a simple server with all possible configurations
-	 * 
+	 *
 	 * @param port
 	 *            The port to listen on
 	 * @param autoRegisterEveryClient
@@ -97,7 +92,7 @@ public abstract class Server {
 	 * printed.<br>
 	 * <b>Be careful:</b> This will not prevent processing of messages passed to the
 	 * onLog and onLogError methods, if they were overwritten.
-	 * 
+	 *
 	 * @param muted
 	 *            true if there should be no console output
 	 */
@@ -108,7 +103,7 @@ public abstract class Server {
 	/**
 	 * Sets the interval in which ping packages should be sent to keep the
 	 * connection alive. Default is 30 seconds.
-	 * 
+	 *
 	 * @param seconds
 	 *            The interval in which ping packages should be sent
 	 */
@@ -149,7 +144,7 @@ public abstract class Server {
 				public void run() {
 					while (server != null) {
 
-						
+
 						try {
 							onLog("[Server] Waiting for connection" + (secureMode ? " using SSL..." : "..."));
 							@SuppressWarnings("resource")
@@ -205,7 +200,7 @@ public abstract class Server {
 	/**
 	 * Sends a reply to client. This method should only be called from within the
 	 * run-Method of an <code>Executable</code> implementation.
-	 * 
+	 *
 	 * @param toSocket
 	 *            The socket the message should be delivered to
 	 * @param datapackageContent
@@ -218,7 +213,7 @@ public abstract class Server {
 
 	/**
 	 * Sends a message to a client with specified id
-	 * 
+	 *
 	 * @param remoteClientId
 	 *            The id of the client it registered on login
 	 * @param datapackageId
@@ -232,7 +227,7 @@ public abstract class Server {
 
 	/**
 	 * Sends a message to a client with specified id
-	 * 
+	 *
 	 * @param remoteClientId
 	 *            The id of the client it registered on login
 	 * @param message
@@ -248,7 +243,7 @@ public abstract class Server {
 
 	/**
 	 * Sends a message to a client
-	 * 
+	 *
 	 * @param remoteClient
 	 *            The target client
 	 * @param datapackageId
@@ -263,7 +258,7 @@ public abstract class Server {
 
 	/**
 	 * Sends a message to a client
-	 * 
+	 *
 	 * @param remoteClient
 	 *            The target client
 	 * @param message
@@ -293,7 +288,7 @@ public abstract class Server {
 
 	/**
 	 * Broadcasts a message to a group of clients
-	 * 
+	 *
 	 * @param group
 	 *            The group name the clients registered on their login
 	 * @param message
@@ -326,7 +321,7 @@ public abstract class Server {
 
 	/**
 	 * Broadcasts a message to a group of clients
-	 * 
+	 *
 	 * @param message
 	 *            The message
 	 * @return The number of clients reached
@@ -356,7 +351,7 @@ public abstract class Server {
 	/**
 	 * Registers a method that will be executed if a message containing
 	 * <i>identifier</i> is received
-	 * 
+	 *
 	 * @param identifier
 	 *            The ID of the message to proccess
 	 * @param executable
@@ -395,7 +390,7 @@ public abstract class Server {
 
 	/**
 	 * Registers a client to allow sending it direct and broadcast messages later
-	 * 
+	 *
 	 * @param id
 	 *            The client's id
 	 * @param newClientSocket
@@ -407,7 +402,7 @@ public abstract class Server {
 
 	/**
 	 * Registers a client to allow sending it direct and broadcast messages later
-	 * 
+	 *
 	 * @param id
 	 *            The client's id
 	 * @param group
@@ -428,7 +423,7 @@ public abstract class Server {
 		try {
 
 			if (secureMode) {
-				server = ((SSLServerSocketFactory) SSLServerSocketFactory.getDefault()).createServerSocket(port);
+				server = SSLServerSocketFactory.getDefault().createServerSocket(port);
 			} else {
 				server = new ServerSocket(port);
 			}
@@ -459,7 +454,7 @@ public abstract class Server {
 
 	/**
 	 * Counts the number of clients registered
-	 * 
+	 *
 	 * @return The number of clients registered
 	 */
 	public synchronized int getClientCount() {
@@ -482,7 +477,7 @@ public abstract class Server {
 
 	/**
 	 * Called on the listener's main thread when a new client registers
-	 * 
+	 *
 	 * @param msg
 	 *            The message the client registered with
 	 * @param socket
@@ -498,7 +493,7 @@ public abstract class Server {
 	 * Called on the listener's main thread when a client is removed from the list.
 	 * This normally happens if there was a problem with its connection. You should
 	 * wait for the client to connect again.
-	 * 
+	 *
 	 * @param remoteClient
 	 *            The client that was removed from the list of reachable clients
 	 */
@@ -512,7 +507,7 @@ public abstract class Server {
 	 * output stream (if output is not muted).<br>
 	 * Error messages are passed to the <code>onLogError</code> event listener.<br>
 	 * <b>Override this method to catch and process the message in a custom way.</b>
-	 * 
+	 *
 	 * @param message
 	 *            The content of the output to be made
 	 */
@@ -527,7 +522,7 @@ public abstract class Server {
 	 * error output stream (if output is not muted).<br>
 	 * Non-error messages are passed to the <code>onLog</code> event listener.<br>
 	 * <b>Override this method to catch and process the message in a custom way.</b>
-	 * 
+	 *
 	 * @param message
 	 *            The content of the error output to be made
 	 */
@@ -549,7 +544,7 @@ public abstract class Server {
 		 * Creates a RemoteClient representating a client connected to this server
 		 * storing an id for identification and a socket for communication. The client
 		 * will be member of the default group.
-		 * 
+		 *
 		 * @param id
 		 *            The clients id (to use for identification; choose a custom String)
 		 * @param socket
@@ -566,7 +561,7 @@ public abstract class Server {
 		 * storing an id for identification and a socket for communication. The client
 		 * can be set as a member of a group of clients to receive messages broadcasted
 		 * to a group.
-		 * 
+		 *
 		 * @param id
 		 *            The clients id (to use for identification; choose a custom String)
 		 * @param group
